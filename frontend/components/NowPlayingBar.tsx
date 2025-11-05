@@ -16,14 +16,20 @@ import Image from 'next/image';
 import AdvancedVolumeControl from './AdvancedVolumeControl';
 
 export default function NowPlayingBar() {
-  const { currentTrack, playlist } = usePlaylistStore();
+  const { 
+    currentTrack, 
+    playlist,
+    volume,
+    isMuted,
+    isPlaying,
+    setVolume,
+    toggleMute,
+    togglePlayPause
+  } = usePlaylistStore();
   const updateTrackMutation = useUpdatePlaylistTrack();
   
-  const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [startTime, setStartTime] = useState(Date.now());
-  const [volume, setVolume] = useState(75);
-  const [isMuted, setIsMuted] = useState(false);
   const [isDraggingSeek, setIsDraggingSeek] = useState(false);
   const [seekTime, setSeekTime] = useState(0);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -31,22 +37,45 @@ export default function NowPlayingBar() {
   const track = currentTrack();
   if (!track) return null;
 
+  // Simple timer logic - reset when track changes
   useEffect(() => {
-    if (!isPlaying || isDraggingSeek) return;
+    if (track) {
+      console.log('🎵 Track changed to:', track.track.title, 'is_playing:', track.is_playing);
+      setCurrentTime(0);
+      setStartTime(Date.now());
+    }
+  }, [track?.id]);
 
+  // Main timer effect - only runs when track is playing
+  useEffect(() => {
+    if (!track?.is_playing || isDraggingSeek) return;
+
+    console.log('🎵 Starting timer for:', track.track.title);
+    const startTimeRef = Date.now();
+    
     const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const elapsed = Math.floor((Date.now() - startTimeRef) / 1000);
+      
+      console.log(`⏱️ Timer - Elapsed: ${elapsed}s, Duration: ${track.track.duration_seconds}s, Track: ${track.track.title}`);
       
       if (elapsed >= track.track.duration_seconds) {
+        console.log(`🏁 Track completed! ${track.track.title}`);
         setCurrentTime(track.track.duration_seconds);
+        clearInterval(interval);
         handleNextTrack();
       } else {
         setCurrentTime(elapsed);
       }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [isPlaying, startTime, track.track.duration_seconds, isDraggingSeek]);
+    return () => {
+      console.log('🛑 Clearing timer for:', track.track.title);
+      clearInterval(interval);
+    };
+  }, [track?.is_playing, track?.id, isDraggingSeek]);
+
+  // Use track's playing state for UI
+  const trackIsPlaying = track?.is_playing || false;
 
   const handleNextTrack = () => {
     const sortedPlaylist = [...playlist].sort((a, b) => a.position - b.position);
@@ -139,8 +168,8 @@ export default function NowPlayingBar() {
               />
               <motion.div
                 animate={{ 
-                  scale: isPlaying ? [1, 1.1, 1] : 1,
-                  opacity: isPlaying ? [0.8, 1, 0.8] : 0.8
+                  scale: trackIsPlaying ? [1, 1.1, 1] : 1,
+                  opacity: trackIsPlaying ? [0.8, 1, 0.8] : 0.8
                 }}
                 transition={{ duration: 2, repeat: Infinity }}
                 className="absolute inset-0 bg-neon-teal/20"
@@ -148,10 +177,10 @@ export default function NowPlayingBar() {
               
               {/* Vinyl spinning effect */}
               <motion.div
-                animate={{ rotate: isPlaying ? 360 : 0 }}
+                animate={{ rotate: trackIsPlaying ? 360 : 0 }}
                 transition={{ 
                   duration: 3, 
-                  repeat: isPlaying ? Infinity : 0, 
+                  repeat: trackIsPlaying ? Infinity : 0, 
                   ease: "linear" 
                 }}
                 className="absolute inset-2 border border-neon-teal/30 rounded-full"
@@ -189,11 +218,17 @@ export default function NowPlayingBar() {
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setIsPlaying(!isPlaying)}
+                onClick={() => {
+                  console.log('🎵 Play/Pause button clicked, current state:', trackIsPlaying);
+                  updateTrackMutation.mutate({
+                    id: track.id,
+                    data: { is_playing: !trackIsPlaying }
+                  });
+                }}
                 className="p-4 bg-gradient-to-r from-neon-teal to-neon-blue rounded-full text-dark-400 shadow-lg hover:shadow-neon-teal/50 transition-all duration-200"
               >
                 <AnimatePresence mode="wait">
-                  {isPlaying ? (
+                  {trackIsPlaying ? (
                     <motion.div
                       key="pause"
                       initial={{ scale: 0 }}
@@ -295,7 +330,7 @@ export default function NowPlayingBar() {
               volume={volume}
               onVolumeChange={setVolume}
               isMuted={isMuted}
-              onMuteToggle={() => setIsMuted(!isMuted)}
+              onMuteToggle={toggleMute}
             />
 
             {/* Actions */}
@@ -322,7 +357,7 @@ export default function NowPlayingBar() {
         {/* Waveform visualization */}
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: isPlaying ? 0.3 : 0.1 }}
+          animate={{ opacity: trackIsPlaying ? 0.3 : 0.1 }}
           className="flex items-end justify-center space-x-1 mt-4 h-8"
         >
           {Array.from({ length: 40 }).map((_, i) => (
@@ -330,13 +365,13 @@ export default function NowPlayingBar() {
               key={i}
               className="bg-neon-teal rounded-full w-1"
               animate={{
-                height: isPlaying 
+                height: trackIsPlaying 
                   ? [Math.random() * 20 + 4, Math.random() * 30 + 8, Math.random() * 20 + 4]
                   : 4
               }}
               transition={{
                 duration: 0.5 + Math.random() * 0.5,
-                repeat: isPlaying ? Infinity : 0,
+                repeat: trackIsPlaying ? Infinity : 0,
                 ease: "easeInOut",
                 delay: i * 0.05
               }}

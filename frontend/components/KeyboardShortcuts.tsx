@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Keyboard, X } from '@phosphor-icons/react';
 import Modal from './Modal';
+import { usePlaylistStore } from '@/store/playlist-store';
 
 const shortcuts = [
   { key: 'Space', description: 'Play/Pause current track' },
@@ -11,6 +11,9 @@ const shortcuts = [
   { key: '← / P', description: 'Previous track' },
   { key: '↑', description: 'Volume up' },
   { key: '↓', description: 'Volume down' },
+  { key: 'Shift + ↑', description: 'Select previous song' },
+  { key: 'Shift + ↓', description: 'Select next song' },
+  { key: 'Enter', description: 'Play selected song' },
   { key: 'M', description: 'Toggle mute' },
   { key: 'S', description: 'Shuffle playlist' },
   { key: 'R', description: 'Toggle repeat mode' },
@@ -19,7 +22,7 @@ const shortcuts = [
 ];
 
 export default function KeyboardShortcuts() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { showShortcutsModal, setShowShortcutsModal } = usePlaylistStore();
 
   return (
     <>
@@ -27,7 +30,7 @@ export default function KeyboardShortcuts() {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(true)}
+        onClick={() => setShowShortcutsModal(true)}
         className="p-2 rounded-xl bg-dark-200/50 border border-white/10 hover:border-neon-teal/30 transition-all duration-200"
         title="Keyboard Shortcuts (Press ?)"
       >
@@ -35,7 +38,7 @@ export default function KeyboardShortcuts() {
       </motion.button>
 
       {/* Modal */}
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} className="max-w-md w-full">
+      <Modal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} className="max-w-md w-full">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
                 <div className="flex items-center space-x-3">
@@ -51,7 +54,7 @@ export default function KeyboardShortcuts() {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setShowShortcutsModal(false)}
                   className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                 >
                   <X size={20} className="text-gray-400" weight="bold" />

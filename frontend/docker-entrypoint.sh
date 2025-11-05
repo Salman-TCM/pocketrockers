@@ -5,7 +5,8 @@ echo "🌐 Starting Frontend Application..."
 
 # Function to wait for backend to be ready
 wait_for_backend() {
-    local backend_url="${NEXT_PUBLIC_API_URL:-http://backend:4000}"
+    # For internal container communication, use the container name
+    local backend_url="${INTERNAL_API_URL:-http://backend:4000}"
     echo "🔗 Checking backend connection at $backend_url..."
     
     local max_attempts=30

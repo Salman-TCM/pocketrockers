@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Track {
+  id              String   @id @default(cuid())
+  title           String
+  artist          String
+  album           String
+  duration_seconds Int
+  genre           String
+  cover_url       String?
+  playlistTracks  PlaylistTrack[]
+  
+  @@map("tracks")
+}
+
+model PlaylistTrack {
+  id        String   @id @default(cuid())
+  track_id  String
+  position  Float
+  votes     Int      @default(0)
+  added_by  String
+  added_at  DateTime @default(now())
+  is_playing Boolean @default(false)
+  played_at DateTime?
+  
+  track     Track    @relation(fields: [track_id], references: [id], onDelete: Cascade)
+  
+  @@unique([track_id])
+  @@map("playlist_tracks")
+}
