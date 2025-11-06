@@ -6,6 +6,11 @@ echo "================================="
 
 API_BASE="http://localhost:4000"
 
+echo "ℹ️  Note: The app automatically loads demo songs when launched with Docker!"
+echo "   Popular tracks like Bohemian Rhapsody, Billie Jean, and Hotel California"
+echo "   are already included. This script adds an extra track for demonstration."
+echo ""
+
 echo "1. Adding a track to playlist..."
 curl -s -X POST "$API_BASE/api/playlist" \
   -H "Content-Type: application/json" \

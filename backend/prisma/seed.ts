@@ -59,32 +59,58 @@ const playlistItems = [
 ];
 
 async function main() {
-  console.log('Start seeding...');
+  console.log('🎵 Loading demo songs for SyncPlay...');
 
+  // Check if database is already seeded
+  const existingTracks = await prisma.track.count();
+  
+  if (existingTracks > 0) {
+    console.log(`✅ Database already contains ${existingTracks} tracks, skipping seed.`);
+    console.log('💡 Set SEED_DATABASE=true to force re-seed, or delete database to start fresh.');
+    return;
+  }
+
+  // Clean slate for seeding
   await prisma.playlistTrack.deleteMany();
   await prisma.track.deleteMany();
 
+  console.log(`📀 Creating ${tracks.length} demo tracks...`);
   const createdTracks: any[] = [];
   for (const track of tracks) {
     const created = await prisma.track.create({
       data: track,
     });
     createdTracks.push(created);
+    console.log(`   ♪ ${track.title} by ${track.artist}`);
   }
 
+  console.log(`🎶 Setting up sample playlist with ${playlistItems.length} tracks...`);
   for (const item of playlistItems) {
+    const track = createdTracks[item.track_index];
     await prisma.playlistTrack.create({
       data: {
-        track_id: createdTracks[item.track_index].id,
+        track_id: track.id,
         position: item.position,
         votes: item.votes,
         added_by: item.added_by,
         is_playing: item.is_playing || false,
       },
     });
+    
+    const status = item.is_playing ? '▶️ Now Playing' : `👍 ${item.votes} votes`;
+    console.log(`   ${item.position}. ${track.title} - ${status}`);
   }
 
-  console.log('Seeding finished.');
+  console.log('');
+  console.log('🎉 Demo database seeded successfully!');
+  console.log('🌐 Visit http://localhost:3001 to start collaborating!');
+  console.log('🎵 Featured tracks include:');
+  console.log('   • Bohemian Rhapsody - Queen');
+  console.log('   • Billie Jean - Michael Jackson'); 
+  console.log('   • Hotel California - Eagles');
+  console.log('   • Imagine - John Lennon');
+  console.log('   • Stairway to Heaven - Led Zeppelin');
+  console.log('   ...and many more!');
 }
 
 main()

@@ -13,7 +13,7 @@ services:
       - DATABASE_URL=file:./dev.db
       - PORT=4000
       - NODE_ENV=production
-      - SEED_DATABASE=false
+      - SEED_DATABASE=true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s

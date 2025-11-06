@@ -30,14 +30,21 @@ run_migrations() {
 
 seed_database() {
     if [ "$SEED_DATABASE" = "true" ]; then
-        echo "Seeding database..."
-        if command -v ts-node >/dev/null 2>&1; then
-            npm run db:seed
+        echo "🎵 Loading demo songs for SyncPlay..."
+        
+        # The seed script will check if database is already populated
+        if npm run db:seed; then
+            echo "✅ Demo songs loaded successfully!"
+        elif [ -f "dist/prisma/seed.js" ] && node dist/prisma/seed.js; then
+            echo "✅ Demo songs loaded successfully using compiled script!"
         else
-            echo "ts-node not available in production build, skipping database seeding"
-            echo "Database seeding should be done manually or in development environment"
+            echo "⚠️  Could not load demo songs automatically"
+            echo "   You can manually run: npm run db:seed"
+            echo "   Or use the demo script: ./demo-enhanced-player.sh"
         fi
-        echo "Database seeding step completed!"
+    else
+        echo "💡 Skipping demo song loading (SEED_DATABASE=false)"
+        echo "   Set SEED_DATABASE=true to automatically load demo tracks"
     fi
 }
 
