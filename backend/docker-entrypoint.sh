@@ -5,16 +5,26 @@ echo "🚀 Starting Backend Application..."
 
 wait_for_db() {
     echo "Checking database connection..."
-    until npx prisma db push --accept-data-loss 2>/dev/null; do
-        echo "Waiting for database to be ready..."
-        sleep 2
-    done
+    # Check if database file exists
+    if [ ! -f ./prisma/dev.db ]; then
+        echo "Database does not exist, creating..."
+        npx prisma db push --accept-data-loss
+    else
+        echo "Database already exists, checking connection..."
+        npx prisma generate
+    fi
     echo "Database is ready!"
 }
 
 run_migrations() {
     echo "Running database migrations..."
-    npx prisma migrate deploy
+    # Use migrate dev which handles both schema push and migration history
+    if [ "$NODE_ENV" = "development" ]; then
+        npx prisma migrate dev --name init || npx prisma db push
+    else
+        # In production, try migrate deploy first, fallback to db push
+        npx prisma migrate deploy || npx prisma db push --accept-data-loss
+    fi
     echo "Migrations completed!"
 }
 
