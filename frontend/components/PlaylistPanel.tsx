@@ -76,7 +76,7 @@ export default function PlaylistPanel() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="h-full flex flex-col glass-panel"
+      className="h-full w-full flex flex-col bg-black/20 backdrop-blur-xl border border-white/10 rounded-lg"
     >
       {/* Header */}
       <div className="p-6 border-b border-white/10">

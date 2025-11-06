@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { usePlaylistStore } from '@/store/playlist-store';
+import { usePlayerStore } from '@/store/player-store';
 import { SocketEvent } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -15,7 +16,17 @@ export const useSocket = () => {
   } = usePlaylistStore();
 
   useEffect(() => {
-    const socket = io('http://localhost:4000', {
+    // Dynamically determine the WebSocket URL based on current host
+    const getSocketUrl = () => {
+      if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        const port = 4000;
+        return `http://${host}:${port}`;
+      }
+      return 'http://localhost:4000';
+    };
+    
+    const socket = io(getSocketUrl(), {
       transports: ['websocket', 'polling'],
     });
     
@@ -87,12 +98,42 @@ export const useSocket = () => {
           is_playing: item.id === data.id
         }));
         setPlaylist(updatedPlaylist);
+        
+        // Update player store
+        const playingTrack = updatedPlaylist.find(item => item.is_playing);
+        if (playingTrack) {
+          const playerStore = usePlayerStore.getState();
+          playerStore.setCurrentTrack(playingTrack);
+          playerStore.play();
+        }
+      }
+    });
+
+    socket.on('track.paused', (data: SocketEvent) => {
+      if (data.id) {
+        const playerStore = usePlayerStore.getState();
+        if (playerStore.currentTrack?.id === data.id) {
+          playerStore.pause();
+        }
+      }
+    });
+
+    socket.on('track.changed', (data: SocketEvent) => {
+      if (data.item) {
+        const playerStore = usePlayerStore.getState();
+        playerStore.setCurrentTrack(data.item);
+        if (data.item.is_playing) {
+          playerStore.play();
+        }
       }
     });
 
     socket.on('playlist.reordered', (data: SocketEvent) => {
       if (data.items) {
         setPlaylist(data.items);
+        // Update player queue
+        const playerStore = usePlayerStore.getState();
+        playerStore.setQueue(data.items);
       }
     });
 

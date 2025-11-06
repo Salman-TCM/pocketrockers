@@ -21,9 +21,25 @@ export interface PlaylistTrack {
 }
 
 export interface SocketEvent {
-  type: 'track.added' | 'track.removed' | 'track.moved' | 'track.voted' | 'track.playing' | 'playlist.reordered' | 'ping';
+  type: 'track.added' | 'track.removed' | 'track.moved' | 'track.voted' | 'track.playing' | 'track.paused' | 'track.changed' | 'playlist.reordered' | 'ping';
   item?: any;
   id?: string;
   items?: any[];
   ts?: string;
+  data?: any;
+}
+
+export interface PlayerLayoutMode {
+  isExpanded: boolean;
+  isLibraryCollapsed: boolean;
+}
+
+export interface PlaybackState {
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  volume: number;
+  isMuted: boolean;
+  isShuffled: boolean;
+  repeatMode: 'none' | 'one' | 'all';
 }
