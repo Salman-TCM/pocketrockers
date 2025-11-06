@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePlaylistStore } from '@/store/playlist-store';
 import { usePlayerStore } from '@/store/player-store';
 import { useSocket } from '@/hooks/use-socket';
-import { useRealtimePlayer } from '@/hooks/use-realtime-player';
 import { useTracks, usePlaylist, useUpdatePlaylistTrack } from '@/hooks/use-api';
 import Header from '@/components/Header';
 import TrackLibrary from '@/components/TrackLibrary';
@@ -13,14 +12,13 @@ import PlaylistPanel from '@/components/PlaylistPanel';
 import NowPlayingBar from '@/components/NowPlayingBar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
-import { cn } from '@/lib/utils';
 
-// Enhanced Components
+// New Enhanced Components
 import EnhancedNowPlaying from '@/components/EnhancedNowPlaying';
 import CollapsibleTrackLibrary from '@/components/CollapsibleTrackLibrary';
 import HorizontalPlaylist from '@/components/HorizontalPlaylist';
 
-export default function Home() {
+export default function EnhancedHome() {
   const {
     setTracks,
     setPlaylist,
@@ -43,10 +41,6 @@ export default function Home() {
   } = usePlayerStore();
 
   const updateTrackMutation = useUpdatePlaylistTrack();
-  
-  // Initialize socket and realtime player sync
-  const socket = useSocket();
-  useRealtimePlayer(socket);
 
   const handlePlayPause = () => {
     const current = currentTrack();
@@ -59,7 +53,8 @@ export default function Home() {
     playerTogglePlayPause();
   };
 
-  // Keyboard shortcuts
+  // Initialize socket connection and keyboard shortcuts
+  useSocket();
   useKeyboardShortcuts(
     handlePlayPause,
     volumeUp,
@@ -135,43 +130,29 @@ export default function Home() {
             {/* Header */}
             <Header />
 
-            {/* Main Content - Responsive Grid Layout */}
-            <motion.div 
-              className="flex-1 overflow-hidden px-4 py-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className={cn(
-                "h-full grid gap-2 transition-all duration-500 ease-out",
-                "sm:gap-3 md:gap-4",
-                isLibraryCollapsed 
-                  ? "grid-cols-[80px_1fr]" 
-                  : "grid-rows-[300px_1fr] md:grid-rows-none md:grid-cols-[40%_60%] lg:grid-cols-[35%_65%] xl:grid-cols-[35%_65%]"
-              )}>
-                {/* Track Library Panel - 35-40% width */}
-                <motion.div
-                  layout
-                  className="h-full overflow-hidden"
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                >
-                  <CollapsibleTrackLibrary />
-                </motion.div>
+            {/* Main Content */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Collapsible Track Library */}
+              <CollapsibleTrackLibrary />
 
-                {/* Playlist Panel - 60-65% width */}
+              {/* Main Content Area */}
+              <motion.div
+                animate={{ 
+                  marginLeft: isLibraryCollapsed ? '80px' : '384px' 
+                }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="flex-1 overflow-hidden"
+              >
                 <motion.div
-                  layout
                   initial={{ x: 50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="h-full overflow-hidden"
+                  className="h-full p-6"
                 >
-                  <div className="h-full">
-                    <PlaylistPanel />
-                  </div>
+                  <PlaylistPanel />
                 </motion.div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
 
             {/* Traditional Now Playing Bar (When No Track Expanded) */}
             {currentTrack() && (

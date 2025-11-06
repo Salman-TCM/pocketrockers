@@ -10,10 +10,14 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000', 
       'http://localhost:3001',
+      'http://0.0.0.0:3000',
+      'http://0.0.0.0:3001',
       'http://192.168.100.45:3000',
       'http://192.168.100.45:3001',
       // Allow any IP in the 192.168.x.x range for development
-      /^http:\/\/192\.168\.\d+\.\d+:(3000|3001)$/
+      /^http:\/\/192\.168\.\d+\.\d+:(3000|3001)$/,
+      // Allow 0.0.0.0 for development
+      /^http:\/\/0\.0\.0\.0:(3000|3001)$/
     ],
     credentials: true,
   });

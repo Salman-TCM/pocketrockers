@@ -2,7 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Track, PlaylistTrack } from '@/types';
 import toast from 'react-hot-toast';
 
-const API_BASE = 'http://localhost:4000/api';
+// Dynamically determine the API base URL
+const getApiBase = () => {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const port = 4000;
+    return `http://${host}:${port}/api`;
+  }
+  return 'http://localhost:4000/api';
+};
+
+const API_BASE = getApiBase();
 
 // API functions
 const api = {
@@ -36,7 +46,7 @@ const api = {
     data,
   }: {
     id: string;
-    data: { position?: number; is_playing?: boolean };
+    data: { position?: number; is_playing?: boolean; votes?: number };
   }): Promise<PlaylistTrack> => {
     const response = await fetch(`${API_BASE}/playlist/${id}`, {
       method: 'PATCH',
