@@ -42,26 +42,20 @@ export default function PlaylistPanel() {
   };
 
   const handlePlay = (id: string, index?: number) => {
-    console.log('🎵 handlePlay called for track ID:', id, 'index:', index);
-    console.trace('🔍 handlePlay call stack:');
-    
-    // Set selected track if index is provided
     if (index !== undefined) {
       setSelectedTrackIndex(index);
     }
     
-    // First, stop ALL currently playing tracks
+    // Stop currently playing tracks
     const currentPlaying = playlistTracks.find(track => track.is_playing);
     if (currentPlaying) {
-      console.log('🛑 Stopping current track:', currentPlaying.track.title);
       updateTrackMutation.mutate({
         id: currentPlaying.id,
         data: { is_playing: false }
       });
     }
     
-    // Then start the new track
-    console.log('🎵 Starting track:', id);
+    // Start new track
     updateTrackMutation.mutate({
       id,
       data: { is_playing: true }
@@ -140,10 +134,7 @@ export default function PlaylistPanel() {
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      onClick={(e) => {
-                        console.log('🎵 Song row clicked for:', item.track.title);
-                        handleSongClick(item.id, index, e);
-                      }}
+                      onClick={(e) => handleSongClick(item.id, index, e)}
                       className={cn(
                         "group border-b border-white/5 transition-all duration-300 cursor-pointer",
                         snapshot.isDragging && "bg-dark-200/80 shadow-2xl scale-105 rotate-1 z-50",
@@ -280,16 +271,11 @@ export default function PlaylistPanel() {
                             whileHover={{ scale: item.is_playing ? 1 : 1.05 }}
                             whileTap={{ scale: item.is_playing ? 1 : 0.95 }}
                             onClick={(e) => {
-                              console.log('🎵 Play button clicked for:', item.track.title);
                               e.preventDefault();
                               e.stopPropagation();
                               
-                              // Only allow play if not already playing
                               if (!item.is_playing) {
-                                console.log('🎵 Executing handlePlay for:', item.track.title);
                                 handlePlay(item.id, index);
-                              } else {
-                                console.log('🎵 Track already playing, ignoring click');
                               }
                             }}
                             disabled={item.is_playing}

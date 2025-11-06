@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { usePlaylistStore } from '@/store/playlist-store';
 import { useSocket } from '@/hooks/use-socket';
@@ -10,7 +10,6 @@ import TrackLibrary from '@/components/TrackLibrary';
 import PlaylistPanel from '@/components/PlaylistPanel';
 import NowPlayingBar from '@/components/NowPlayingBar';
 import LoadingScreen from '@/components/LoadingScreen';
-import KeyboardShortcuts from '@/components/KeyboardShortcuts';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 
 export default function Home() {
@@ -27,11 +26,9 @@ export default function Home() {
 
   const updateTrackMutation = useUpdatePlaylistTrack();
 
-  // Create proper play/pause callback that uses track mutation
   const handlePlayPause = () => {
     const current = currentTrack();
     if (current) {
-      console.log('🎵 Space bar play/pause for track:', current.track.title, 'current state:', current.is_playing);
       updateTrackMutation.mutate({
         id: current.id,
         data: { is_playing: !current.is_playing }
@@ -41,14 +38,13 @@ export default function Home() {
 
   // Initialize socket connection and keyboard shortcuts
   useSocket();
-  // TEMPORARILY DISABLED for debugging
-  // useKeyboardShortcuts(
-  //   handlePlayPause,
-  //   volumeUp,
-  //   volumeDown,
-  //   toggleMute,
-  //   toggleShortcutsModal
-  // );
+  useKeyboardShortcuts(
+    handlePlayPause,
+    volumeUp,
+    volumeDown,
+    toggleMute,
+    toggleShortcutsModal
+  );
 
   // Fetch data with React Query
   const { data: tracks, isLoading: tracksLoading } = useTracks();
@@ -116,12 +112,6 @@ export default function Home() {
         </motion.div>
       )}
 
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-neon-teal/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-neon-purple/5 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-neon-blue/10 rounded-full blur-2xl" />
-      </div>
     </motion.div>
   );
 }

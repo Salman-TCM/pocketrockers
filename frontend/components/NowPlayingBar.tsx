@@ -37,29 +37,23 @@ export default function NowPlayingBar() {
   const track = currentTrack();
   if (!track) return null;
 
-  // Simple timer logic - reset when track changes
+  // Reset timer when track changes
   useEffect(() => {
     if (track) {
-      console.log('🎵 Track changed to:', track.track.title, 'is_playing:', track.is_playing);
       setCurrentTime(0);
       setStartTime(Date.now());
     }
   }, [track?.id]);
 
-  // Main timer effect - only runs when track is playing
+  // Timer effect
   useEffect(() => {
     if (!track?.is_playing || isDraggingSeek) return;
 
-    console.log('🎵 Starting timer for:', track.track.title);
     const startTimeRef = Date.now();
-    
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTimeRef) / 1000);
       
-      console.log(`⏱️ Timer - Elapsed: ${elapsed}s, Duration: ${track.track.duration_seconds}s, Track: ${track.track.title}`);
-      
       if (elapsed >= track.track.duration_seconds) {
-        console.log(`🏁 Track completed! ${track.track.title}`);
         setCurrentTime(track.track.duration_seconds);
         clearInterval(interval);
         handleNextTrack();
@@ -68,10 +62,7 @@ export default function NowPlayingBar() {
       }
     }, 1000);
 
-    return () => {
-      console.log('🛑 Clearing timer for:', track.track.title);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [track?.is_playing, track?.id, isDraggingSeek]);
 
   // Use track's playing state for UI
@@ -166,25 +157,9 @@ export default function NowPlayingBar() {
                 className="object-cover mix-blend-overlay"
                 unoptimized
               />
-              <motion.div
-                animate={{ 
-                  scale: trackIsPlaying ? [1, 1.1, 1] : 1,
-                  opacity: trackIsPlaying ? [0.8, 1, 0.8] : 0.8
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute inset-0 bg-neon-teal/20"
-              />
-              
-              {/* Vinyl spinning effect */}
-              <motion.div
-                animate={{ rotate: trackIsPlaying ? 360 : 0 }}
-                transition={{ 
-                  duration: 3, 
-                  repeat: trackIsPlaying ? Infinity : 0, 
-                  ease: "linear" 
-                }}
-                className="absolute inset-2 border border-neon-teal/30 rounded-full"
-              />
+              {trackIsPlaying && (
+                <div className="absolute inset-0 bg-neon-teal/20" />
+              )}
             </motion.div>
 
             <motion.div
@@ -219,7 +194,6 @@ export default function NowPlayingBar() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => {
-                  console.log('🎵 Play/Pause button clicked, current state:', trackIsPlaying);
                   updateTrackMutation.mutate({
                     id: track.id,
                     data: { is_playing: !trackIsPlaying }
@@ -282,37 +256,10 @@ export default function NowPlayingBar() {
                   className="h-full bg-gradient-to-r from-neon-teal to-neon-blue rounded-full relative"
                 />
                 
-                {/* Draggable Handle */}
-                <motion.div
-                  animate={{ 
-                    left: `${progress}%`,
-                    scale: isDraggingSeek ? 1.3 : 1
-                  }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity border-2 border-neon-teal"
-                />
-                
-                {/* Pulsing Effect on Handle */}
-                <motion.div
-                  animate={{ 
-                    left: `${progress}%`,
-                    scale: isDraggingSeek ? [1, 1.2, 1] : [1, 1.2, 1],
-                    opacity: isDraggingSeek ? [0.8, 1, 0.8] : [0.8, 1, 0.8]
-                  }}
-                  transition={{ 
-                    duration: 2, 
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-neon-teal rounded-full opacity-60"
-                />
-                
-                {/* Hover Effect */}
-                <motion.div
-                  animate={{ 
-                    width: `${progress}%`,
-                    opacity: isDraggingSeek ? 0.3 : 0
-                  }}
-                  className="absolute left-0 top-0 h-full bg-neon-teal/20 rounded-full transition-opacity group-hover:opacity-20"
+                {/* Handle */}
+                <div
+                  style={{ left: `${progress}%` }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 />
               </div>
             </div>
@@ -354,30 +301,6 @@ export default function NowPlayingBar() {
           </motion.div>
         </div>
 
-        {/* Waveform visualization */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: trackIsPlaying ? 0.3 : 0.1 }}
-          className="flex items-end justify-center space-x-1 mt-4 h-8"
-        >
-          {Array.from({ length: 40 }).map((_, i) => (
-            <motion.div
-              key={i}
-              className="bg-neon-teal rounded-full w-1"
-              animate={{
-                height: trackIsPlaying 
-                  ? [Math.random() * 20 + 4, Math.random() * 30 + 8, Math.random() * 20 + 4]
-                  : 4
-              }}
-              transition={{
-                duration: 0.5 + Math.random() * 0.5,
-                repeat: trackIsPlaying ? Infinity : 0,
-                ease: "easeInOut",
-                delay: i * 0.05
-              }}
-            />
-          ))}
-        </motion.div>
       </motion.div>
     </AnimatePresence>
   );
