@@ -44,9 +44,9 @@ const Waveform = ({ isPlaying, progress }: WaveformProps) => {
   
   return (
     <div className="relative w-full max-w-2xl h-32 flex items-end justify-center space-x-1">
-      {/* Warm background glow effect */}
+      {/* Neon background glow effect */}
       <div className="absolute inset-0 blur-xl rounded-full" style={{
-        background: 'linear-gradient(90deg, transparent 0%, rgba(255, 69, 0, 0.08) 50%, transparent 100%)'
+        background: 'linear-gradient(90deg, transparent 0%, rgba(0, 255, 204, 0.12) 30%, rgba(120, 119, 198, 0.08) 70%, transparent 100%)'
       }} />
       
       {/* Waveform bars */}
@@ -60,7 +60,7 @@ const Waveform = ({ isPlaying, progress }: WaveformProps) => {
             className="relative w-1.5 rounded-full overflow-hidden"
             style={{
               background: isActive 
-                ? 'linear-gradient(to top, #FF4500 0%, #FF6B35 50%, #5A6B7D 100%)'
+                ? 'linear-gradient(to top, #00FFCC 0%, #7877C6 50%, #5A6B7D 100%)'
                 : 'rgba(107, 123, 140, 0.15)'
             }}
             initial={{ height: 8, scaleY: 0.8 }}
@@ -95,7 +95,7 @@ const Waveform = ({ isPlaying, progress }: WaveformProps) => {
               <motion.div
                 className="absolute inset-0 rounded-full"
                 style={{
-                  background: 'linear-gradient(to top, rgba(255, 69, 0, 0.8) 0%, rgba(255, 107, 53, 0.6) 100%)'
+                  background: 'linear-gradient(to top, rgba(0, 255, 204, 0.8) 0%, rgba(120, 119, 198, 0.6) 100%)'
                 }}
                 animate={{
                   opacity: [0.5, 1, 0.7, 0.9, 0.6],
@@ -125,7 +125,7 @@ const Waveform = ({ isPlaying, progress }: WaveformProps) => {
               key={i}
               className="absolute w-1 h-1 rounded-full"
               style={{
-                background: '#FF4500'
+                background: 'linear-gradient(45deg, #00FFCC, #7877C6)'
               }}
               initial={{ 
                 x: Math.random() * 400, 
@@ -192,8 +192,8 @@ const ProgressRing = ({ progress, size, strokeWidth }: ProgressRingProps) => {
       />
       <defs>
         <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF4500" />
-          <stop offset="50%" stopColor="#FF6B35" />
+          <stop offset="0%" stopColor="#00FFCC" />
+          <stop offset="50%" stopColor="#7877C6" />
           <stop offset="100%" stopColor="#5A6B7D" />
         </linearGradient>
       </defs>
@@ -287,8 +287,8 @@ export default function EnhancedNowPlaying() {
           animate={{ opacity: 1 }}
           className="absolute inset-0"
         >
-          {/* Deep charcoal gradient background */}
-          <div className="absolute inset-0" style={{
+          {/* Deep charcoal gradient background with shadows */}
+          <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.5),0_0_50px_rgba(0,255,204,0.1)]" style={{
             background: 'linear-gradient(135deg, #2D2D34 0%, #3A3A42 50%, #2D2D34 100%)'
           }} />
           
@@ -298,8 +298,8 @@ export default function EnhancedNowPlaying() {
             animate={{
               background: isPlaying 
                 ? [
-                    'radial-gradient(circle at 20% 80%, rgba(255, 69, 0, 0.2) 0%, transparent 60%)',
-                    'radial-gradient(circle at 80% 20%, rgba(255, 107, 53, 0.15) 0%, transparent 60%)',
+                    'radial-gradient(circle at 20% 80%, rgba(0, 255, 204, 0.2) 0%, transparent 60%)',
+                    'radial-gradient(circle at 80% 20%, rgba(120, 119, 198, 0.15) 0%, transparent 60%)',
                     'radial-gradient(circle at 40% 40%, rgba(90, 107, 125, 0.1) 0%, transparent 60%)'
                   ]
                 : 'radial-gradient(circle at 50% 50%, rgba(90, 107, 125, 0.08) 0%, transparent 50%)'
@@ -347,7 +347,7 @@ export default function EnhancedNowPlaying() {
                   className="absolute w-24 h-24 rounded-full opacity-8"
                   style={{
                     background: `radial-gradient(circle, ${
-                      ['rgba(255, 69, 0, 0.3)', 'rgba(255, 107, 53, 0.25)', 'rgba(90, 107, 125, 0.2)', 'rgba(107, 123, 140, 0.15)'][i]
+                      ['rgba(0, 255, 204, 0.3)', 'rgba(120, 119, 198, 0.25)', 'rgba(90, 107, 125, 0.2)', 'rgba(107, 123, 140, 0.15)'][i]
                     } 0%, transparent 70%)`
                   }}
                   animate={{
@@ -412,7 +412,7 @@ export default function EnhancedNowPlaying() {
             <motion.div
               className="absolute -inset-4 rounded-full opacity-0 group-hover:opacity-100 blur-xl"
               style={{
-                background: 'radial-gradient(circle, rgba(255, 69, 0, 0.4) 0%, rgba(255, 107, 53, 0.3) 50%, transparent 70%)'
+                background: 'radial-gradient(circle, rgba(0, 255, 204, 0.4) 0%, rgba(120, 119, 198, 0.3) 50%, transparent 70%)'
               }}
               animate={{
                 opacity: isPlaying ? [0.4, 0.7, 0.4] : 0,
@@ -480,7 +480,7 @@ export default function EnhancedNowPlaying() {
                       }}
                       className="absolute inset-0"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(255, 69, 0, 0.15) 0%, rgba(255, 107, 53, 0.12) 100%)'
+                        background: 'linear-gradient(135deg, rgba(0, 255, 204, 0.15) 0%, rgba(120, 119, 198, 0.12) 100%)'
                       }}
                     />
                     
@@ -488,7 +488,7 @@ export default function EnhancedNowPlaying() {
                     <motion.div
                       className="absolute inset-0 border-2 rounded-3xl"
                       style={{
-                        borderColor: 'rgba(255, 69, 0, 0.6)'
+                        borderColor: 'rgba(0, 255, 204, 0.6)'
                       }}
                       animate={{
                         scale: [1, 1.1, 1],
@@ -538,7 +538,7 @@ export default function EnhancedNowPlaying() {
             <h1 className="text-5xl font-bold text-white mb-2">
               {currentTrack.track.title}
             </h1>
-            <p className="text-2xl mb-1" style={{ color: '#FF6B35' }}>
+            <p className="text-2xl mb-1" style={{ color: '#7877C6' }}>
               {currentTrack.track.artist}
             </p>
             <p className="text-lg text-gray-400">
@@ -576,7 +576,7 @@ export default function EnhancedNowPlaying() {
                 className="absolute left-0 top-0 h-full rounded-full"
                 style={{ 
                   width: `${progressPercentage}%`,
-                  background: 'linear-gradient(90deg, #FF4500 0%, #FF6B35 100%)'
+                  background: 'linear-gradient(90deg, #00FFCC 0%, #7877C6 100%)'
                 }}
               />
               
@@ -603,8 +603,8 @@ export default function EnhancedNowPlaying() {
               onClick={toggleShuffle}
               className="p-3 rounded-full transition-all duration-200"
               style={{
-                color: isShuffled ? '#FF4500' : '#6B7B8C',
-                backgroundColor: isShuffled ? 'rgba(255, 69, 0, 0.15)' : 'transparent'
+                color: isShuffled ? '#00FFCC' : '#6B7B8C',
+                backgroundColor: isShuffled ? 'rgba(0, 255, 204, 0.15)' : 'transparent'
               }}
               onMouseEnter={(e) => {
                 if (!isShuffled) {
@@ -645,8 +645,8 @@ export default function EnhancedNowPlaying() {
               onClick={togglePlayPause}
               className="relative p-6 rounded-full shadow-2xl transition-all duration-300"
               style={{
-                background: 'linear-gradient(135deg, #FF4500 0%, #FF6B35 100%)',
-                boxShadow: '0 20px 40px rgba(255, 69, 0, 0.3), 0 0 20px rgba(255, 107, 53, 0.2)'
+                background: 'linear-gradient(135deg, #00FFCC 0%, #7877C6 100%)',
+                boxShadow: '0 20px 40px rgba(0, 255, 204, 0.3), 0 0 20px rgba(120, 119, 198, 0.2)'
               }}
             >
               <AnimatePresence mode="wait">
@@ -697,8 +697,8 @@ export default function EnhancedNowPlaying() {
               onClick={handleRepeatClick}
               className="p-3 rounded-full transition-all duration-200"
               style={{
-                color: repeatMode !== 'none' ? '#FF4500' : '#6B7B8C',
-                backgroundColor: repeatMode !== 'none' ? 'rgba(255, 69, 0, 0.15)' : 'transparent'
+                color: repeatMode !== 'none' ? '#00FFCC' : '#6B7B8C',
+                backgroundColor: repeatMode !== 'none' ? 'rgba(0, 255, 204, 0.15)' : 'transparent'
               }}
               onMouseEnter={(e) => {
                 if (repeatMode === 'none') {
