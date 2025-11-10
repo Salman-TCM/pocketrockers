@@ -13,7 +13,8 @@ import {
   House,
   Star,
   FolderOpen,
-  X
+  X,
+  Plus
 } from '@phosphor-icons/react';
 import { usePlaylistStore } from '@/store/playlist-store';
 import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
@@ -195,7 +196,7 @@ export default function WinampLeftSidebar() {
       initial={{ x: -300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="w-64 bg-gray-900 border-r border-green-500/30 h-full overflow-y-auto scrollbar-hide"
+      className="w-64 bg-gray-900 border-r border-green-500/30 h-full flex flex-col relative"
       style={{
         background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
         boxShadow: 'inset -1px 0 0 rgba(0,255,128,0.2)'
@@ -203,7 +204,7 @@ export default function WinampLeftSidebar() {
     >
 
       {/* Navigation Sections */}
-      <div className="py-2">
+      <div className="flex-1 overflow-y-auto py-2">
         {sections.map((section, index) => (
           <motion.div
             key={section.title}
@@ -353,14 +354,14 @@ export default function WinampLeftSidebar() {
         ))}
       </div>
 
-      {/* Bottom Actions */}
-      <div className="absolute bottom-0 left-0 right-0 p-2 border-t border-gray-700/50 bg-black">
+      {/* Create Playlist Button */}
+      <div className="flex-shrink-0 p-2 border-t border-gray-700/50 bg-black">
         <button
           onClick={() => setShowCreatePlaylist(true)}
           className="w-full px-2 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors flex items-center justify-center space-x-1"
         >
-          <Star size={10} />
-          <span>Playlist</span>
+          <Plus size={12} />
+          <span>Create Playlist</span>
         </button>
       </div>
 

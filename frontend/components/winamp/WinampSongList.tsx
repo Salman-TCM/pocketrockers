@@ -9,6 +9,7 @@ import {
   CaretDown,
   ThumbsUp,
   ThumbsDown,
+  X,
   MusicNote,
   Clock,
   Calendar,
@@ -18,7 +19,7 @@ import { usePlaylistStore } from '@/store/playlist-store';
 import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
 import { usePlayerStore } from '@/store/player-store';
 import { useFilterStore } from '@/store/filter-store';
-import { useUpdatePlaylistTrack, useVoteTrack } from '@/hooks/use-api';
+import { useUpdatePlaylistTrack, useVoteTrack, useRemoveFromPlaylist } from '@/hooks/use-api';
 import { formatDuration } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -27,17 +28,19 @@ type SortOrder = 'asc' | 'desc';
 
 export default function WinampSongList() {
   const { playlist, currentTrack } = usePlaylistStore();
-  const { getActivePlaylist, activePlaylistId, updateTrackInPlaylist } = useMultiPlaylistStore();
+  const { getActivePlaylist, activePlaylistId, updateTrackInPlaylist, removeTrackFromPlaylist } = useMultiPlaylistStore();
   const { setCurrentTrack, togglePlayPause, isPlaying } = usePlayerStore();
   const { activeFilter, applyFilter } = useFilterStore();
   const updateTrackMutation = useUpdatePlaylistTrack();
   const voteTrackMutation = useVoteTrack();
+  const removeTrackMutation = useRemoveFromPlaylist();
   
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [hoveredTrack, setHoveredTrack] = useState<string | null>(null);
   const [draggedTrack, setDraggedTrack] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
   const dragRef = useRef<HTMLDivElement>(null);
 
   const handleSort = (field: SortField) => {
@@ -274,6 +277,55 @@ export default function WinampSongList() {
     }
   };
 
+  const handleRemoveTrack = (trackId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering play
+    
+    if (!confirm('Remove this track from the playlist?')) {
+      return;
+    }
+    
+    if (activePlaylist) {
+      // Custom playlist - remove locally
+      removeTrackFromPlaylist(activePlaylist.id, trackId);
+    } else {
+      // Server playlist - use API
+      removeTrackMutation.mutate(trackId);
+    }
+  };
+
+  const handleBulkRemove = () => {
+    if (selectedTracks.size === 0) {
+      alert('Please select tracks to remove');
+      return;
+    }
+
+    if (!confirm(`Remove ${selectedTracks.size} track(s) from the playlist?`)) {
+      return;
+    }
+
+    selectedTracks.forEach(trackId => {
+      if (activePlaylist) {
+        removeTrackFromPlaylist(activePlaylist.id, trackId);
+      } else {
+        removeTrackMutation.mutate(trackId);
+      }
+    });
+
+    setSelectedTracks(new Set());
+  };
+
+  const handleTrackSelection = (trackId: string, e: React.ChangeEvent<HTMLInputElement> | React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const newSelection = new Set(selectedTracks);
+    if (newSelection.has(trackId)) {
+      newSelection.delete(trackId);
+    } else {
+      newSelection.add(trackId);
+    }
+    setSelectedTracks(newSelection);
+  };
+
   const SortHeader = ({ field, children, icon }: { 
     field: SortField; 
     children: React.ReactNode; 
@@ -327,7 +379,17 @@ export default function WinampSongList() {
           <div className="flex items-center space-x-4 text-xs text-gray-400">
             <button className="bg-green-600 hover:bg-green-500 px-3 py-1 text-white rounded">Play</button>
             <button className="bg-gray-700 hover:bg-gray-600 px-3 py-1 text-gray-300 rounded">Enqueue</button>
-            <button className="bg-red-600 hover:bg-red-500 px-3 py-1 text-white rounded">Remove</button>
+            <button 
+              onClick={handleBulkRemove}
+              className={`px-3 py-1 text-white rounded transition-colors ${
+                selectedTracks.size > 0 
+                  ? 'bg-red-600 hover:bg-red-500 cursor-pointer' 
+                  : 'bg-gray-600 cursor-not-allowed'
+              }`}
+              disabled={selectedTracks.size === 0}
+            >
+              Remove {selectedTracks.size > 0 && `(${selectedTracks.size})`}
+            </button>
             <span>{displayPlaylist.length} items, {Math.round(displayPlaylist.reduce((acc, item) => acc + item.track.duration_seconds, 0) / 60)} estimated play time</span>
           </div>
         </div>
@@ -336,9 +398,24 @@ export default function WinampSongList() {
       {/* Column Headers */}
       <div className="border-b border-green-500/20 bg-gray-800/50">
         <div className="grid grid-cols-12 gap-2 px-2 py-1 text-xs text-gray-300 font-medium">
+          <div className="col-span-1 text-center">
+            <input
+              type="checkbox"
+              checked={selectedTracks.size === displayPlaylist.length && displayPlaylist.length > 0}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedTracks(new Set(displayPlaylist.map(item => item.id)));
+                } else {
+                  setSelectedTracks(new Set());
+                }
+              }}
+              className="w-3 h-3 accent-green-500"
+              title="Select all"
+            />
+          </div>
           <div className="col-span-2">Added</div>
           <div className="col-span-1 text-center">Votes</div>
-          <div className="col-span-4">Song Name</div>
+          <div className="col-span-3">Song Name</div>
           <div className="col-span-3">Artist</div>
           <div className="col-span-1 text-right">Duration</div>
           <div className="col-span-1 text-center">Actions</div>
@@ -377,6 +454,18 @@ export default function WinampSongList() {
               >
                 {/* Drag Handle */}
                 <div className="absolute left-0 top-0 bottom-0 w-1 cursor-grab active:cursor-grabbing opacity-0 hover:opacity-100 bg-green-500/30 transition-opacity"></div>
+                
+                {/* Selection Checkbox */}
+                <div className="col-span-1 flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedTracks.has(item.id)}
+                    onChange={(e) => handleTrackSelection(item.id, e)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-3 h-3 accent-green-500"
+                  />
+                </div>
+                
                 {/* Library/Date */}
                 <div className="col-span-2 flex items-center">
                   {new Date(item.added_at).toLocaleDateString('en-US', { 
@@ -401,7 +490,7 @@ export default function WinampSongList() {
                 </div>
 
                 {/* Song Name */}
-                <div className="col-span-4 flex items-center truncate">
+                <div className="col-span-3 flex items-center truncate">
                   <span className={`truncate ${isCurrent ? 'font-semibold' : ''}`}>
                     {item.track.title}
                   </span>
@@ -418,7 +507,7 @@ export default function WinampSongList() {
                 </div>
 
                 {/* Vote Actions */}
-                <div className="col-span-1 flex items-center justify-center space-x-1">
+                <div className="col-span-1 flex items-center justify-center space-x-0.5">
                   <button
                     onClick={(e) => handleVote(item.id, 'up', e)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-green-500/20 rounded transition-all"
@@ -432,6 +521,13 @@ export default function WinampSongList() {
                     title="Downvote"
                   >
                     <ThumbsDown size={12} className="text-red-400 hover:text-red-300" />
+                  </button>
+                  <button
+                    onClick={(e) => handleRemoveTrack(item.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
+                    title="Remove from playlist"
+                  >
+                    <X size={12} className="text-red-400 hover:text-red-300" />
                   </button>
                 </div>
               </motion.div>
