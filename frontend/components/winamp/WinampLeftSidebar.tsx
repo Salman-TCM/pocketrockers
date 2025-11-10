@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { usePlaylistStore } from '@/store/playlist-store';
 import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
+import { useFilterStore, FilterType } from '@/store/filter-store';
 import { useTracks, useAddToPlaylist } from '@/hooks/use-api';
 
 interface SidebarSection {
@@ -37,6 +38,7 @@ export default function WinampLeftSidebar() {
     deletePlaylist,
     renamePlaylist
   } = useMultiPlaylistStore();
+  const { activeFilter, setActiveFilter, clearFilter } = useFilterStore();
   const { data: tracks } = useTracks();
   const addToPlaylistMutation = useAddToPlaylist();
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
@@ -149,6 +151,36 @@ export default function WinampLeftSidebar() {
     setSearchQuery('');
   };
 
+  // Map filter names to filter types
+  const getFilterType = (itemName: string): FilterType => {
+    switch (itemName) {
+      case 'Most Played': return 'most_played';
+      case 'Recently Added': return 'recently_added';
+      case 'Recently Played': return 'recently_played';
+      case 'Never Played': return 'never_played';
+      case 'Top Rated': return 'top_rated';
+      default: return null;
+    }
+  };
+
+  const handleFilterClick = (itemName: string) => {
+    const filterType = getFilterType(itemName);
+    
+    if (filterType) {
+      // Clear any active playlist when using filters
+      if (activePlaylistId) {
+        setActivePlaylist(''); // Clear active playlist
+      }
+      
+      // Toggle filter - if same filter is clicked, clear it
+      if (activeFilter === filterType) {
+        clearFilter();
+      } else {
+        setActiveFilter(filterType);
+      }
+    }
+  };
+
   const filteredTracks = tracks?.filter(track => {
     const query = searchQuery.toLowerCase();
     return (
@@ -238,7 +270,12 @@ export default function WinampLeftSidebar() {
                             ) : (
                               <>
                                 <button
-                                  onClick={() => setActivePlaylist(playlist.id)}
+                                  onClick={() => {
+                                    setActivePlaylist(playlist.id);
+                                    if (activeFilter) {
+                                      clearFilter(); // Clear any active filter when selecting a playlist
+                                    }
+                                  }}
                                   className={`flex items-center space-x-2 flex-1 ${
                                     activePlaylistId === playlist.id ? 'text-green-400 font-semibold' : ''
                                   }`}
@@ -281,18 +318,32 @@ export default function WinampLeftSidebar() {
                         )}
                       </>
                     ) : (
-                      section.items.map((item, itemIndex) => (
-                        <motion.button
-                          key={item}
-                          initial={{ x: -10, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: itemIndex * 0.05 }}
-                          className="w-full text-left px-2 py-1 text-xs text-gray-400 hover:text-green-400 hover:bg-green-500/10 transition-all duration-200 flex items-center space-x-2 group"
-                        >
-                          <span className="w-3 text-center">•</span>
-                          <span>{item}</span>
-                        </motion.button>
-                      ))
+                      section.items.map((item, itemIndex) => {
+                        const filterType = getFilterType(item);
+                        const isActive = activeFilter === filterType;
+                        
+                        return (
+                          <motion.button
+                            key={item}
+                            initial={{ x: -10, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: itemIndex * 0.05 }}
+                            onClick={() => section.title === 'Recent Items' ? handleFilterClick(item) : undefined}
+                            className={`w-full text-left px-2 py-1 text-xs transition-all duration-200 flex items-center space-x-2 group ${
+                              isActive 
+                                ? 'bg-green-500/20 text-green-300 border-l-2 border-green-400' 
+                                : 'text-gray-400 hover:text-green-400 hover:bg-green-500/10'
+                            } ${
+                              section.title === 'Recent Items' ? 'cursor-pointer' : ''
+                            }`}
+                          >
+                            <span className="w-3 text-center">
+                              {isActive ? '▶' : '•'}
+                            </span>
+                            <span>{item}</span>
+                          </motion.button>
+                        );
+                      })
                     )}
                   </div>
                 </motion.div>

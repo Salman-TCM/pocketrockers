@@ -17,6 +17,7 @@ import {
 import { usePlaylistStore } from '@/store/playlist-store';
 import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
 import { usePlayerStore } from '@/store/player-store';
+import { useFilterStore } from '@/store/filter-store';
 import { useUpdatePlaylistTrack, useVoteTrack } from '@/hooks/use-api';
 import { formatDuration } from '@/lib/utils';
 import Image from 'next/image';
@@ -28,6 +29,7 @@ export default function WinampSongList() {
   const { playlist, currentTrack } = usePlaylistStore();
   const { getActivePlaylist, activePlaylistId, updateTrackInPlaylist } = useMultiPlaylistStore();
   const { setCurrentTrack, togglePlayPause, isPlaying } = usePlayerStore();
+  const { activeFilter, applyFilter } = useFilterStore();
   const updateTrackMutation = useUpdatePlaylistTrack();
   const voteTrackMutation = useVoteTrack();
   
@@ -47,9 +49,12 @@ export default function WinampSongList() {
     }
   };
 
-  // Use active playlist if available, otherwise fall back to main playlist
+  // Determine what playlist to display
   const activePlaylist = getActivePlaylist();
-  const displayPlaylist = activePlaylist ? activePlaylist.tracks : playlist;
+  let basePlaylist = activePlaylist ? activePlaylist.tracks : playlist;
+  
+  // Apply filter if active
+  const displayPlaylist = activeFilter ? applyFilter(basePlaylist, activeFilter) : basePlaylist;
 
   const sortedPlaylist = useMemo(() => {
     const sorted = [...displayPlaylist];
@@ -119,9 +124,13 @@ export default function WinampSongList() {
       // Then toggle the selected track
       const newPlayingState = !track.is_playing;
       console.log('Setting track playing state to:', newPlayingState);
-      updateTrackInPlaylist(activePlaylist.id, trackId, { 
-        is_playing: newPlayingState 
-      });
+      
+      const updates: any = { is_playing: newPlayingState };
+      if (newPlayingState) {
+        updates.played_at = new Date().toISOString(); // Mark as played
+      }
+      
+      updateTrackInPlaylist(activePlaylist.id, trackId, updates);
       
       // Update player state if starting playback
       if (newPlayingState) {
@@ -155,6 +164,18 @@ export default function WinampSongList() {
   };
 
   const current = currentTrack();
+
+  // Get display name for filter types
+  const getFilterDisplayName = (filterType: string): string => {
+    switch (filterType) {
+      case 'most_played': return 'Most Played';
+      case 'recently_added': return 'Recently Added';
+      case 'recently_played': return 'Recently Played';
+      case 'never_played': return 'Never Played';
+      case 'top_rated': return 'Top Rated';
+      default: return 'Library';
+    }
+  };
 
   // Position calculation algorithm (from assignment requirements)
   const calculatePosition = (prevPosition?: number | null, nextPosition?: number | null): number => {
@@ -290,10 +311,16 @@ export default function WinampSongList() {
       <div className="border-b border-green-500/30 bg-gray-900/50 px-4 py-2">
         <div className="flex items-center justify-between">
           <h1 className="text-sm text-gray-300">
-            {activePlaylist ? activePlaylist.name : 'Library'}
-            {activePlaylist && (
+            {activeFilter ? getFilterDisplayName(activeFilter) :
+             activePlaylist ? activePlaylist.name : 'Library'}
+            {activePlaylist && !activeFilter && (
               <span className="text-xs text-gray-500 ml-2">
                 ({activePlaylist.description || 'Custom Playlist'})
+              </span>
+            )}
+            {activeFilter && (
+              <span className="text-xs text-green-400 ml-2">
+                (Filtered View)
               </span>
             )}
           </h1>
