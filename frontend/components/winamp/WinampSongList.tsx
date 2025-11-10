@@ -13,6 +13,8 @@ import {
   User
 } from '@phosphor-icons/react';
 import { usePlaylistStore } from '@/store/playlist-store';
+import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
+import { usePlayerStore } from '@/store/player-store';
 import { useUpdatePlaylistTrack } from '@/hooks/use-api';
 import { formatDuration } from '@/lib/utils';
 import Image from 'next/image';
@@ -22,6 +24,8 @@ type SortOrder = 'asc' | 'desc';
 
 export default function WinampSongList() {
   const { playlist, currentTrack } = usePlaylistStore();
+  const { getActivePlaylist, activePlaylistId, updateTrackInPlaylist } = useMultiPlaylistStore();
+  const { setCurrentTrack, togglePlayPause, isPlaying } = usePlayerStore();
   const updateTrackMutation = useUpdatePlaylistTrack();
   
   const [sortField, setSortField] = useState<SortField>('date');
@@ -37,8 +41,12 @@ export default function WinampSongList() {
     }
   };
 
+  // Use active playlist if available, otherwise fall back to main playlist
+  const activePlaylist = getActivePlaylist();
+  const displayPlaylist = activePlaylist ? activePlaylist.tracks : playlist;
+
   const sortedPlaylist = useMemo(() => {
-    const sorted = [...playlist].sort((a, b) => {
+    const sorted = [...displayPlaylist].sort((a, b) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -65,12 +73,48 @@ export default function WinampSongList() {
     });
     
     return sorted;
-  }, [playlist, sortField, sortOrder]);
+  }, [displayPlaylist, sortField, sortOrder]);
 
   const handlePlayTrack = (trackId: string) => {
-    const track = playlist.find(item => item.id === trackId);
-    if (track) {
-      // If the track is already playing, just pause it
+    const track = displayPlaylist.find(item => item.id === trackId);
+    
+    if (!track) {
+      console.warn('Track not found:', trackId);
+      return;
+    }
+    
+    console.log('Playing track:', track.track.title, 'from', activePlaylist ? 'custom playlist' : 'server playlist');
+    
+    // Set the current track in the player store
+    setCurrentTrack(track);
+    
+    if (activePlaylist) {
+      // For custom playlists, handle playback locally
+      console.log('Updating custom playlist tracks...');
+      
+      // First, stop any currently playing track in this playlist
+      activePlaylist.tracks.forEach(t => {
+        if (t.is_playing && t.id !== trackId) {
+          console.log('Stopping track:', t.track.title);
+          updateTrackInPlaylist(activePlaylist.id, t.id, { is_playing: false });
+        }
+      });
+      
+      // Then toggle the selected track
+      const newPlayingState = !track.is_playing;
+      console.log('Setting track playing state to:', newPlayingState);
+      updateTrackInPlaylist(activePlaylist.id, trackId, { 
+        is_playing: newPlayingState 
+      });
+      
+      // Update player state if starting playback
+      if (newPlayingState) {
+        console.log('Starting playback in player store');
+        togglePlayPause();
+      }
+    } else {
+      // For server playlists, use the API
+      console.log('Using server API for playback...');
       if (track.is_playing) {
         updateTrackMutation.mutate({
           id: trackId,
@@ -78,7 +122,7 @@ export default function WinampSongList() {
         });
       } else {
         // If starting a new track, stop any currently playing track first
-        const currentlyPlaying = playlist.find(item => item.is_playing);
+        const currentlyPlaying = displayPlaylist.find(item => item.is_playing);
         if (currentlyPlaying && currentlyPlaying.id !== trackId) {
           updateTrackMutation.mutate({
             id: currentlyPlaying.id,
@@ -132,12 +176,19 @@ export default function WinampSongList() {
       {/* Header */}
       <div className="border-b border-green-500/30 bg-gray-900/50 px-4 py-2">
         <div className="flex items-center justify-between">
-          <h1 className="text-sm text-gray-300">Library</h1>
+          <h1 className="text-sm text-gray-300">
+            {activePlaylist ? activePlaylist.name : 'Library'}
+            {activePlaylist && (
+              <span className="text-xs text-gray-500 ml-2">
+                ({activePlaylist.description || 'Custom Playlist'})
+              </span>
+            )}
+          </h1>
           <div className="flex items-center space-x-4 text-xs text-gray-400">
             <button className="bg-green-600 hover:bg-green-500 px-3 py-1 text-white rounded">Play</button>
             <button className="bg-gray-700 hover:bg-gray-600 px-3 py-1 text-gray-300 rounded">Enqueue</button>
             <button className="bg-red-600 hover:bg-red-500 px-3 py-1 text-white rounded">Remove</button>
-            <span>{playlist.length} items, {Math.round(playlist.reduce((acc, item) => acc + item.track.duration_seconds, 0) / 60)} estimated play time</span>
+            <span>{displayPlaylist.length} items, {Math.round(displayPlaylist.reduce((acc, item) => acc + item.track.duration_seconds, 0) / 60)} estimated play time</span>
           </div>
         </div>
       </div>
