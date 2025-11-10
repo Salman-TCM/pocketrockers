@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, 
   Pause, 
   CaretUp, 
   CaretDown,
+  ThumbsUp,
+  ThumbsDown,
   MusicNote,
   Clock,
   Calendar,
@@ -15,7 +17,7 @@ import {
 import { usePlaylistStore } from '@/store/playlist-store';
 import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
 import { usePlayerStore } from '@/store/player-store';
-import { useUpdatePlaylistTrack } from '@/hooks/use-api';
+import { useUpdatePlaylistTrack, useVoteTrack } from '@/hooks/use-api';
 import { formatDuration } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -27,10 +29,14 @@ export default function WinampSongList() {
   const { getActivePlaylist, activePlaylistId, updateTrackInPlaylist } = useMultiPlaylistStore();
   const { setCurrentTrack, togglePlayPause, isPlaying } = usePlayerStore();
   const updateTrackMutation = useUpdatePlaylistTrack();
+  const voteTrackMutation = useVoteTrack();
   
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [hoveredTrack, setHoveredTrack] = useState<string | null>(null);
+  const [draggedTrack, setDraggedTrack] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragRef = useRef<HTMLDivElement>(null);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -46,7 +52,17 @@ export default function WinampSongList() {
   const displayPlaylist = activePlaylist ? activePlaylist.tracks : playlist;
 
   const sortedPlaylist = useMemo(() => {
-    const sorted = [...displayPlaylist].sort((a, b) => {
+    const sorted = [...displayPlaylist];
+    
+    // For drag-and-drop functionality, we need to respect position ordering
+    // Only apply custom sorting when explicitly requested
+    if (sortField === 'date' && sortOrder === 'desc') {
+      // Default view - sort by position for proper drag-and-drop
+      return sorted.sort((a, b) => (a.position || 0) - (b.position || 0));
+    }
+    
+    // Custom sorting
+    sorted.sort((a, b) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -140,6 +156,103 @@ export default function WinampSongList() {
 
   const current = currentTrack();
 
+  // Position calculation algorithm (from assignment requirements)
+  const calculatePosition = (prevPosition?: number | null, nextPosition?: number | null): number => {
+    if (!prevPosition && !nextPosition) return 1.0;
+    if (!prevPosition) return nextPosition! - 1;
+    if (!nextPosition) return prevPosition + 1;
+    return (prevPosition + nextPosition) / 2;
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, trackId: string) => {
+    setDraggedTrack(trackId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', trackId);
+    
+    // Add some visual feedback
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedTrack(null);
+    setDragOverIndex(null);
+    
+    // Restore opacity
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (!draggedId || draggedId === sortedPlaylist[targetIndex]?.id) {
+      setDraggedTrack(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Find the dragged track and calculate new position
+    const draggedTrackIndex = sortedPlaylist.findIndex(t => t.id === draggedId);
+    if (draggedTrackIndex === -1) return;
+
+    const prevTrack = targetIndex > 0 ? sortedPlaylist[targetIndex - 1] : null;
+    const nextTrack = sortedPlaylist[targetIndex];
+    
+    const newPosition = calculatePosition(
+      prevTrack?.position || null,
+      nextTrack?.position || null
+    );
+
+    console.log('Dropping track at index', targetIndex, 'with position', newPosition);
+
+    // Update position based on playlist type
+    if (activePlaylist) {
+      // Custom playlist - update locally
+      updateTrackInPlaylist(activePlaylist.id, draggedId, { position: newPosition });
+    } else {
+      // Server playlist - use API
+      updateTrackMutation.mutate({
+        id: draggedId,
+        data: { position: newPosition }
+      });
+    }
+
+    setDraggedTrack(null);
+    setDragOverIndex(null);
+  };
+
+  const handleVote = (trackId: string, direction: 'up' | 'down', e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering play
+    
+    if (activePlaylist) {
+      // Custom playlist - update locally
+      const track = activePlaylist.tracks.find(t => t.id === trackId);
+      if (track) {
+        const currentVotes = track.votes || 0;
+        const newVotes = direction === 'up' ? currentVotes + 1 : currentVotes - 1;
+        updateTrackInPlaylist(activePlaylist.id, trackId, { votes: newVotes });
+      }
+    } else {
+      // Server playlist - use API
+      voteTrackMutation.mutate({ id: trackId, direction });
+    }
+  };
+
   const SortHeader = ({ field, children, icon }: { 
     field: SortField; 
     children: React.ReactNode; 
@@ -196,11 +309,12 @@ export default function WinampSongList() {
       {/* Column Headers */}
       <div className="border-b border-green-500/20 bg-gray-800/50">
         <div className="grid grid-cols-12 gap-2 px-2 py-1 text-xs text-gray-300 font-medium">
-          <div className="col-span-2">Library</div>
-          <div className="col-span-1 text-center">Play Count</div>
-          <div className="col-span-5">Song Name</div>
-          <div className="col-span-2">Artist</div>
-          <div className="col-span-2 text-right">Duration</div>
+          <div className="col-span-2">Added</div>
+          <div className="col-span-1 text-center">Votes</div>
+          <div className="col-span-4">Song Name</div>
+          <div className="col-span-3">Artist</div>
+          <div className="col-span-1 text-right">Duration</div>
+          <div className="col-span-1 text-center">Actions</div>
         </div>
       </div>
 
@@ -219,11 +333,23 @@ export default function WinampSongList() {
                 transition={{ delay: index * 0.01 }}
                 onMouseEnter={() => setHoveredTrack(item.id)}
                 onMouseLeave={() => setHoveredTrack(null)}
-                className={`grid grid-cols-12 gap-2 px-2 py-1 text-xs border-b border-gray-800/30 hover:bg-green-500/10 cursor-pointer ${
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, item.id)}
+                onDragEnd={(e) => handleDragEnd(e as unknown as React.DragEvent)}
+                onDragOver={(e) => handleDragOver(e as unknown as React.DragEvent, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                className={`group relative grid grid-cols-12 gap-2 px-2 py-1 text-xs border-b border-gray-800/30 hover:bg-green-500/10 transition-all duration-200 ${
+                  draggedTrack === item.id ? 'opacity-50 scale-95' : 'cursor-pointer'
+                } ${
+                  dragOverIndex === index ? 'border-green-400 border-t-2' : ''
+                } ${
                   isCurrent ? 'bg-green-500/20 text-green-300' : isPlaying ? 'bg-green-500/15 text-green-400' : 'text-gray-300'
                 }`}
-                onClick={() => handlePlayTrack(item.id)}
+                onClick={() => !draggedTrack && handlePlayTrack(item.id)}
               >
+                {/* Drag Handle */}
+                <div className="absolute left-0 top-0 bottom-0 w-1 cursor-grab active:cursor-grabbing opacity-0 hover:opacity-100 bg-green-500/30 transition-opacity"></div>
                 {/* Library/Date */}
                 <div className="col-span-2 flex items-center">
                   {new Date(item.added_at).toLocaleDateString('en-US', { 
@@ -236,26 +362,50 @@ export default function WinampSongList() {
                   })}
                 </div>
 
-                {/* Play Count */}
+                {/* Votes */}
                 <div className="col-span-1 text-center flex items-center justify-center">
-                  {item.votes || 1}
+                  <span className={`font-medium ${
+                    (item.votes || 0) > 0 ? 'text-green-400' : 
+                    (item.votes || 0) < 0 ? 'text-red-400' : 
+                    'text-gray-400'
+                  }`}>
+                    {item.votes || 0}
+                  </span>
                 </div>
 
                 {/* Song Name */}
-                <div className="col-span-5 flex items-center truncate">
+                <div className="col-span-4 flex items-center truncate">
                   <span className={`truncate ${isCurrent ? 'font-semibold' : ''}`}>
                     {item.track.title}
                   </span>
                 </div>
 
                 {/* Artist */}
-                <div className="col-span-2 flex items-center truncate">
+                <div className="col-span-3 flex items-center truncate">
                   <span className="truncate">{item.track.artist}</span>
                 </div>
 
                 {/* Duration */}
-                <div className="col-span-2 text-right flex items-center justify-end">
+                <div className="col-span-1 text-right flex items-center justify-end">
                   {formatDuration(item.track.duration_seconds)}
+                </div>
+
+                {/* Vote Actions */}
+                <div className="col-span-1 flex items-center justify-center space-x-1">
+                  <button
+                    onClick={(e) => handleVote(item.id, 'up', e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-green-500/20 rounded transition-all"
+                    title="Upvote"
+                  >
+                    <ThumbsUp size={12} className="text-green-400 hover:text-green-300" />
+                  </button>
+                  <button
+                    onClick={(e) => handleVote(item.id, 'down', e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
+                    title="Downvote"
+                  >
+                    <ThumbsDown size={12} className="text-red-400 hover:text-red-300" />
+                  </button>
                 </div>
               </motion.div>
             );

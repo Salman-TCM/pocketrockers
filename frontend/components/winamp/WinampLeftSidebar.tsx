@@ -121,14 +121,14 @@ export default function WinampLeftSidebar() {
     
     // Add selected tracks to the new playlist
     if (selectedTracks.size > 0) {
-      const tracksToAdd = Array.from(selectedTracks).map(trackId => {
+      const tracksToAdd = Array.from(selectedTracks).map((trackId, index) => {
         const track = tracks?.find(t => t.id === trackId);
         if (track) {
           return {
             id: `${playlistId}-${trackId}`,
             track_id: trackId,
             track: track,
-            position: 0,
+            position: index + 1, // Sequential positions starting from 1
             added_by: 'User',
             added_at: new Date().toISOString(),
             is_playing: false,
