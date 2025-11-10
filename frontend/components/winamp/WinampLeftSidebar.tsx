@@ -19,7 +19,8 @@ import {
 import { usePlaylistStore } from '@/store/playlist-store';
 import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
 import { useFilterStore, FilterType } from '@/store/filter-store';
-import { useTracks, useAddToPlaylist } from '@/hooks/use-api';
+import { useTracks, useAddToPlaylist, useUpdatePlaylistTrack } from '@/hooks/use-api';
+import { usePlayerStore } from '@/store/player-store';
 
 interface SidebarSection {
   title: string;
@@ -42,6 +43,7 @@ export default function WinampLeftSidebar() {
   const { activeFilter, setActiveFilter, clearFilter } = useFilterStore();
   const { data: tracks } = useTracks();
   const addToPlaylistMutation = useAddToPlaylist();
+  const updateTrackMutation = useUpdatePlaylistTrack();
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [playlistName, setPlaylistName] = useState('');
@@ -196,7 +198,7 @@ export default function WinampLeftSidebar() {
       initial={{ x: -300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="w-64 bg-gray-900 border-r border-green-500/30 h-full flex flex-col relative"
+      className="w-64 bg-gray-900 border-r border-green-500/30 h-full flex flex-col relative z-10"
       style={{
         background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
         boxShadow: 'inset -1px 0 0 rgba(0,255,128,0.2)'
@@ -272,6 +274,30 @@ export default function WinampLeftSidebar() {
                               <>
                                 <button
                                   onClick={() => {
+                                    // Stop any currently playing tracks when switching playlists
+                                    const { playlists, updateTrackInPlaylist: updateTrack } = useMultiPlaylistStore.getState();
+                                    playlists.forEach(p => {
+                                      p.tracks.forEach(t => {
+                                        if (t.is_playing) {
+                                          updateTrack(p.id, t.id, { is_playing: false });
+                                        }
+                                      });
+                                    });
+                                    
+                                    // Also stop server playlist tracks
+                                    const serverPlaylist = usePlaylistStore.getState().playlist;
+                                    serverPlaylist.forEach(serverTrack => {
+                                      if (serverTrack.is_playing) {
+                                        updateTrackMutation.mutate({
+                                          id: serverTrack.id,
+                                          data: { is_playing: false }
+                                        });
+                                      }
+                                    });
+                                    
+                                    // Clear player state
+                                    usePlayerStore.getState().setCurrentTrack(null);
+                                    
                                     setActivePlaylist(playlist.id);
                                     if (activeFilter) {
                                       clearFilter(); // Clear any active filter when selecting a playlist
@@ -355,7 +381,7 @@ export default function WinampLeftSidebar() {
       </div>
 
       {/* Create Playlist Button */}
-      <div className="flex-shrink-0 p-2 border-t border-gray-700/50 bg-black">
+      <div className="flex-shrink-0 p-2 border-t border-gray-700/50 bg-gray-900 relative z-20">
         <button
           onClick={() => setShowCreatePlaylist(true)}
           className="w-full px-2 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors flex items-center justify-center space-x-1"
@@ -372,7 +398,7 @@ export default function WinampLeftSidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[9999]"
             onClick={() => {
               setShowCreatePlaylist(false);
               setSearchQuery('');

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useReducer } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, 
@@ -41,6 +41,7 @@ export default function WinampSongList() {
   const [draggedTrack, setDraggedTrack] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
   const dragRef = useRef<HTMLDivElement>(null);
 
   const handleSort = (field: SortField) => {
@@ -103,53 +104,124 @@ export default function WinampSongList() {
     const track = displayPlaylist.find(item => item.id === trackId);
     
     if (!track) {
-      console.warn('Track not found:', trackId);
+      console.warn('❌ Track not found:', trackId);
       return;
     }
     
-    console.log('Playing track:', track.track.title, 'from', activePlaylist ? 'custom playlist' : 'server playlist');
-    
-    // Set the current track in the player store
-    setCurrentTrack(track);
+    console.log('🎵 Playing track:', track.track.title, 'from', activePlaylist ? `custom playlist "${activePlaylist.name}"` : 'server playlist');
+    console.log('🔍 Current track state:', { 
+      is_playing: track.is_playing, 
+      trackId: track.id,
+      playlistId: activePlaylist?.id 
+    });
     
     if (activePlaylist) {
-      // For custom playlists, handle playback locally
-      console.log('Updating custom playlist tracks...');
+      console.log('🎛️ Custom playlist mode - handling locally');
       
-      // First, stop any currently playing track in this playlist
-      activePlaylist.tracks.forEach(t => {
-        if (t.is_playing && t.id !== trackId) {
-          console.log('Stopping track:', t.track.title);
-          updateTrackInPlaylist(activePlaylist.id, t.id, { is_playing: false });
-        }
-      });
+      // Get the current playing state of this specific track
+      const thisTrack = activePlaylist.tracks.find(t => t.id === trackId);
+      const isThisTrackPlaying = thisTrack?.is_playing || false;
       
-      // Then toggle the selected track
-      const newPlayingState = !track.is_playing;
-      console.log('Setting track playing state to:', newPlayingState);
-      
-      const updates: any = { is_playing: newPlayingState };
-      if (newPlayingState) {
-        updates.played_at = new Date().toISOString(); // Mark as played
+      // Only stop other tracks if we're starting playback (not pausing current track)
+      if (!isThisTrackPlaying) {
+        console.log('🛑 Stopping all other playing tracks...');
+        
+        // Get all playlists and stop playing tracks
+        const allPlaylists = useMultiPlaylistStore.getState().playlists;
+        allPlaylists.forEach(playlist => {
+          playlist.tracks.forEach(t => {
+            if (t.is_playing && t.id !== trackId) {
+              console.log(`⏹️ Stopping: "${t.track.title}" from playlist "${playlist.name}"`);
+              updateTrackInPlaylist(playlist.id, t.id, { is_playing: false });
+            }
+          });
+        });
       }
       
+      // Also stop any playing tracks from server playlist (only if we're starting playback)
+      if (!isThisTrackPlaying) {
+        const serverPlaylist = usePlaylistStore.getState().playlist;
+        serverPlaylist.forEach(serverTrack => {
+          if (serverTrack.is_playing) {
+            console.log('⏹️ Stopping server track:', serverTrack.track.title);
+            updateTrackMutation.mutate({
+              id: serverTrack.id,
+              data: { is_playing: false }
+            });
+          }
+        });
+      }
+      
+      // Toggle the selected track (if clicking the same track that's playing, pause it)
+      const newPlayingState = !isThisTrackPlaying;
+      
+      console.log(`${newPlayingState ? '▶️' : '⏸️'} ${newPlayingState ? 'Starting' : 'Pausing'} track:`, track.track.title);
+      
+      const updates = { 
+        is_playing: newPlayingState,
+        ...(newPlayingState ? { played_at: new Date().toISOString() } : {})
+      };
+      
+      // Update the track in the playlist
       updateTrackInPlaylist(activePlaylist.id, trackId, updates);
       
-      // Update player state if starting playback
+      // Force component re-render to reflect state changes
+      forceUpdate();
+      
+      // Update player store
+      console.log('📱 Updating player store...');
       if (newPlayingState) {
-        console.log('Starting playback in player store');
-        togglePlayPause();
+        setCurrentTrack({ ...track, ...updates });
+        if (!isPlaying) {
+          console.log('🔄 Starting player...');
+          togglePlayPause();
+        }
+      } else {
+        // When pausing, keep the track but update playing state
+        setCurrentTrack({ ...track, ...updates });
+        if (isPlaying) {
+          console.log('⏸️ Pausing player...');
+          togglePlayPause();
+        }
       }
+      
+      // Verify state after update
+      setTimeout(() => {
+        const updatedState = useMultiPlaylistStore.getState();
+        const updatedPlaylist = updatedState.playlists.find(p => p.id === activePlaylist.id);
+        const updatedTrack = updatedPlaylist?.tracks.find(t => t.id === trackId);
+        console.log('✅ Track state after update:', {
+          is_playing: updatedTrack?.is_playing,
+          played_at: updatedTrack?.played_at
+        });
+      }, 100);
+      
     } else {
-      // For server playlists, use the API
-      console.log('Using server API for playback...');
+      console.log('🌐 Server playlist mode - using API');
+      
+      // Stop all custom playlist tracks first
+      const allPlaylists = useMultiPlaylistStore.getState().playlists;
+      allPlaylists.forEach(playlist => {
+        playlist.tracks.forEach(t => {
+          if (t.is_playing) {
+            console.log('⏹️ Stopping custom playlist track:', t.track.title);
+            updateTrackInPlaylist(playlist.id, t.id, { is_playing: false });
+          }
+        });
+      });
+      
       if (track.is_playing) {
+        // Stop the track
         updateTrackMutation.mutate({
           id: trackId,
           data: { is_playing: false }
         });
+        setCurrentTrack(null);
+        if (isPlaying) {
+          togglePlayPause();
+        }
       } else {
-        // If starting a new track, stop any currently playing track first
+        // Start the track
         const currentlyPlaying = displayPlaylist.find(item => item.is_playing);
         if (currentlyPlaying && currentlyPlaying.id !== trackId) {
           updateTrackMutation.mutate({
@@ -157,11 +229,15 @@ export default function WinampSongList() {
             data: { is_playing: false }
           });
         }
-        // Then start the new track
+        
         updateTrackMutation.mutate({
           id: trackId,
           data: { is_playing: true }
         });
+        setCurrentTrack(track);
+        if (!isPlaying) {
+          togglePlayPause();
+        }
       }
     }
   };
@@ -490,7 +566,16 @@ export default function WinampSongList() {
                 </div>
 
                 {/* Song Name */}
-                <div className="col-span-3 flex items-center truncate">
+                <div className="col-span-3 flex items-center truncate space-x-2">
+                  {isPlaying && (
+                    <motion.div
+                      animate={{ opacity: [1, 0.5, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="text-green-400 flex-shrink-0"
+                    >
+                      {isPlaying ? '▶' : '⏸'}
+                    </motion.div>
+                  )}
                   <span className={`truncate ${isCurrent ? 'font-semibold' : ''}`}>
                     {item.track.title}
                   </span>

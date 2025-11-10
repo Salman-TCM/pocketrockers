@@ -19,6 +19,7 @@ import {
 } from '@phosphor-icons/react';
 import { usePlaylistStore } from '@/store/playlist-store';
 import { usePlayerStore } from '@/store/player-store';
+import { useMultiPlaylistStore } from '@/store/multi-playlist-store';
 import { useUpdatePlaylistTrack } from '@/hooks/use-api';
 import { formatDuration, getTrackImage } from '@/lib/utils';
 import Image from 'next/image';
@@ -61,20 +62,100 @@ export default function WinampRightPanel({
     seek
   } = usePlayerStore();
 
+  const { getActivePlaylist } = useMultiPlaylistStore();
   const updateTrackMutation = useUpdatePlaylistTrack();
   const [activeTab, setActiveTab] = useState<'nowplaying' | 'equalizer' | 'playlist'>('nowplaying');
   const [showEqualizer, setShowEqualizer] = useState(false);
 
-  const track = currentTrack();
+  // Add custom volume slider styles
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .volume-slider::-webkit-slider-thumb {
+        appearance: none;
+        height: 14px;
+        width: 14px;
+        border-radius: 50%;
+        background: #10b981;
+        cursor: pointer;
+        box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+        border: 2px solid #065f46;
+      }
+      .volume-slider::-webkit-slider-thumb:hover {
+        background: #059669;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+      }
+      .volume-slider::-moz-range-thumb {
+        height: 14px;
+        width: 14px;
+        border-radius: 50%;
+        background: #10b981;
+        cursor: pointer;
+        border: 2px solid #065f46;
+        box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // Get current track from either custom playlist or server playlist
+  const activePlaylist = getActivePlaylist();
+  let track = null;
+  
+  if (activePlaylist) {
+    // Look for playing track in custom playlist
+    track = activePlaylist.tracks.find(t => t.is_playing) || null;
+    console.log('🎧 Right Panel - Custom playlist track:', track?.track.title || 'none');
+  }
+  
+  // If no track in custom playlist, check server playlist
+  if (!track) {
+    track = currentTrack();
+    if (track) {
+      console.log('🎧 Right Panel - Server playlist track:', track.track.title);
+    }
+  }
+  
+  // Also check player store for current track
+  const playerCurrentTrack = usePlayerStore(state => state.currentTrack);
+  if (!track && playerCurrentTrack) {
+    track = playerCurrentTrack;
+    console.log('🎧 Right Panel - Player store track:', track?.track.title);
+  }
+  
+  // Debug log
+  useEffect(() => {
+    console.log('🎧 Right Panel State:', {
+      hasActivePlaylist: !!activePlaylist,
+      playlistName: activePlaylist?.name,
+      currentTrack: track?.track.title,
+      isPlaying: track?.is_playing,
+      playerIsPlaying: isPlaying
+    });
+  }, [activePlaylist, track, isPlaying]);
+  
   const trackDuration = track?.track.duration_seconds || 0;
   const progress = trackDuration > 0 ? (currentTime / trackDuration) * 100 : 0;
 
   const handlePlayPause = () => {
     if (track) {
-      updateTrackMutation.mutate({
-        id: track.id,
-        data: { is_playing: !track.is_playing }
-      });
+      if (activePlaylist) {
+        // For custom playlists, update local state
+        const { updateTrackInPlaylist } = useMultiPlaylistStore.getState();
+        updateTrackInPlaylist(activePlaylist.id, track.id, { 
+          is_playing: !track.is_playing,
+          ...(track.is_playing ? {} : { played_at: new Date().toISOString() })
+        });
+      } else {
+        // For server playlists, use API
+        updateTrackMutation.mutate({
+          id: track.id,
+          data: { is_playing: !track.is_playing }
+        });
+      }
     }
     togglePlayPause();
   };
@@ -86,7 +167,9 @@ export default function WinampRightPanel({
     setRepeatMode(nextMode);
   };
 
-  const upcomingTracks = playlist
+  // Get upcoming tracks from active playlist or server playlist
+  const playlistTracks = activePlaylist ? activePlaylist.tracks : playlist;
+  const upcomingTracks = playlistTracks
     .filter(item => !item.is_playing)
     .slice(0, 5);
 
@@ -116,13 +199,41 @@ export default function WinampRightPanel({
           <span>Audio Visualizer</span>
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
         </div>
-        <div className="h-16 bg-gray-900/30 border border-green-500/30 rounded p-1">
+        <div className="h-16 bg-gray-900/30 border border-green-500/30 rounded p-1 mb-2">
           <div className="w-full h-full flex items-end justify-center">
             <WinampVisualizer 
               isPlaying={track?.is_playing || false}
               style={visualizerStyle}
               dominantColor="#00ff80"
             />
+          </div>
+        </div>
+        
+        {/* Volume Control */}
+        <div className="flex items-center space-x-2 mt-2">
+          <button
+            onClick={toggleMute}
+            className="text-green-400 hover:text-green-300 transition-colors p-1"
+            title={isMuted ? "Unmute" : "Mute"}
+          >
+            {isMuted ? <SpeakerX size={16} /> : <SpeakerHigh size={16} />}
+          </button>
+          
+          <div className="flex-1 flex items-center space-x-2">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={isMuted ? 0 : volume}
+              onChange={(e) => setVolume(parseInt(e.target.value))}
+              className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer volume-slider"
+              style={{
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${volume}%, #374151 ${volume}%, #374151 100%)`
+              }}
+            />
+            <span className="text-xs text-green-400 font-mono w-10 text-right">
+              {isMuted ? '0' : volume}%
+            </span>
           </div>
         </div>
       </div>

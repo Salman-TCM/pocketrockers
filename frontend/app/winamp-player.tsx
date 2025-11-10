@@ -12,7 +12,6 @@ import WinampLeftSidebar from '@/components/winamp/WinampLeftSidebar';
 import WinampSongList from '@/components/winamp/WinampSongList';
 import WinampRightPanel from '@/components/winamp/WinampRightPanel';
 import WinampHeader from '@/components/winamp/WinampHeader';
-import WinampStatusBar from '@/components/winamp/WinampStatusBar';
 import LoadingScreen from '@/components/LoadingScreen';
 
 export default function WinampPlayer() {
@@ -158,6 +157,7 @@ export default function WinampPlayer() {
           dominantColor={dominantColor}
         />
       </div>
+
 
       {/* Settings Panel */}
       <AnimatePresence>
