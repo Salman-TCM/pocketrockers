@@ -1,6 +1,8 @@
+
 # SyncPlay - Winamp-Style Collaborative Playlist Manager
 
 A modern, real-time collaborative playlist application with a nostalgic Winamp-inspired interface. Features multiple custom playlists, advanced filtering, and immersive playback controls. Built with Next.js, NestJS, and WebSocket technology for seamless real-time synchronization.
+
 
 ## 🎵 Features
 
