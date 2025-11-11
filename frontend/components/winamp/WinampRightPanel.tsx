@@ -335,22 +335,22 @@ export default function WinampRightPanel({
             {upcomingTracks.length > 0 ? upcomingTracks.map((item, index) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-2 hover:bg-green-500/10 transition-colors cursor-pointer text-xs"
+                className="flex items-center justify-between p-3 md:p-2 hover:bg-green-500/10 transition-colors cursor-pointer text-sm md:text-xs touch-target"
                 onClick={() => updateTrackMutation.mutate({
                   id: item.id,
                   data: { is_playing: true }
                 })}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-green-400 font-medium">
+                  <div className="text-green-400 font-medium truncate">
                     {index + 2}. {item.track.title}
                   </div>
-                  <div className="text-gray-400 text-xs">{item.track.artist}</div>
+                  <div className="text-gray-400 text-sm md:text-xs truncate">{item.track.artist}</div>
                 </div>
-                <span className="text-white ml-2">{formatDuration(item.track.duration_seconds)}</span>
+                <span className="text-white ml-2 text-sm md:text-xs">{formatDuration(item.track.duration_seconds)}</span>
               </div>
             )) : (
-              <div className="text-center py-4 text-gray-500 text-xs">
+              <div className="text-center py-6 md:py-4 text-gray-500 text-sm md:text-xs">
                 No upcoming tracks
               </div>
             )}

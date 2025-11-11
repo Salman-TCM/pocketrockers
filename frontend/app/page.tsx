@@ -149,17 +149,16 @@ export default function Home() {
 
             {/* Main Content - Responsive Grid Layout */}
             <motion.div 
-              className="flex-1 overflow-hidden px-4 py-4"
+              className="flex-1 overflow-hidden responsive-container safe-padding"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
               <div className={cn(
-                "h-full grid gap-2 transition-all duration-500 ease-out",
-                "sm:gap-3 md:gap-4",
+                "h-full responsive-grid transition-all duration-500 ease-out",
                 isLibraryCollapsed 
-                  ? "grid-cols-[80px_1fr]" 
-                  : "grid-rows-[300px_1fr] md:grid-rows-none md:grid-cols-[40%_60%] lg:grid-cols-[35%_65%] xl:grid-cols-[35%_65%]"
+                  ? "grid-cols-[60px_1fr] xs:grid-cols-[80px_1fr]" 
+                  : "grid-rows-[250px_1fr] xs:grid-rows-[300px_1fr] sm:grid-rows-[350px_1fr] md:grid-rows-none md:grid-cols-[40%_60%] lg:grid-cols-[35%_65%] xl:grid-cols-[35%_65%]"
               )}>
                 {/* Track Library Panel - 35-40% width */}
                 <motion.div
