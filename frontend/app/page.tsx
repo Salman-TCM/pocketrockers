@@ -20,6 +20,9 @@ import EnhancedNowPlaying from '@/components/EnhancedNowPlaying';
 import CollapsibleTrackLibrary from '@/components/CollapsibleTrackLibrary';
 import HorizontalPlaylist from '@/components/HorizontalPlaylist';
 
+// Winamp Components
+import WinampPlayer from '@/app/winamp-player';
+
 export default function Home() {
   const {
     setTracks,
@@ -41,6 +44,10 @@ export default function Home() {
     expandPlayer,
     toggleLibrary
   } = usePlayerStore();
+
+  // Check if user wants Winamp mode (can be controlled via URL params or localStorage)
+  const isWinampMode = typeof window !== 'undefined' && 
+    (window.location.search.includes('winamp=true') || localStorage.getItem('winampMode') === 'true');
 
   const updateTrackMutation = useUpdatePlaylistTrack();
   
@@ -108,6 +115,11 @@ export default function Home() {
 
   if (tracksLoading || playlistLoading) {
     return <LoadingScreen />;
+  }
+
+  // Return Winamp interface if in Winamp mode
+  if (isWinampMode) {
+    return <WinampPlayer />;
   }
 
   return (

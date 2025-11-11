@@ -16,6 +16,8 @@ interface PlaylistState {
   volume: number;
   isMuted: boolean;
   isPlaying: boolean;
+  isShuffled: boolean;
+  repeatMode: 'none' | 'one' | 'all';
   
   // UI state
   showShortcutsModal: boolean;
@@ -41,6 +43,8 @@ interface PlaylistState {
   togglePlayPause: () => void;
   volumeUp: () => void;
   volumeDown: () => void;
+  toggleShuffle: () => void;
+  setRepeatMode: (mode: 'none' | 'one' | 'all') => void;
   
   // UI actions
   setShowShortcutsModal: (show: boolean) => void;
@@ -74,6 +78,8 @@ export const usePlaylistStore = create<PlaylistState>()(
       volume: 75,
       isMuted: false,
       isPlaying: false,
+      isShuffled: false,
+      repeatMode: 'none',
       
       // UI state initial values
       showShortcutsModal: false,
@@ -110,6 +116,8 @@ export const usePlaylistStore = create<PlaylistState>()(
       togglePlayPause: () => set((state) => ({ isPlaying: !state.isPlaying })),
       volumeUp: () => set((state) => ({ volume: Math.min(100, state.volume + 5) })),
       volumeDown: () => set((state) => ({ volume: Math.max(0, state.volume - 5) })),
+      toggleShuffle: () => set((state) => ({ isShuffled: !state.isShuffled })),
+      setRepeatMode: (repeatMode) => set({ repeatMode }),
       
       // UI actions
       setShowShortcutsModal: (showShortcutsModal) => set({ showShortcutsModal }),

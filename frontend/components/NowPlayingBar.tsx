@@ -138,7 +138,7 @@ export default function NowPlayingBar() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="glass-panel mx-6 mb-6 p-6"
+        className="mx-6 mb-6 p-6 bg-dark-200/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3),0_4px_16px_rgba(0,255,204,0.1),0_2px_8px_rgba(0,0,0,0.2)] relative"
       >
         <div className="flex items-center space-x-6">
           {/* Album Art & Track Info */}
@@ -147,18 +147,38 @@ export default function NowPlayingBar() {
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
-              className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0"
+              className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-[0_4px_20px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,255,204,0.2)] ring-1 ring-white/10"
             >
-              <div className={cn("absolute inset-0 bg-gradient-to-br", generateGradient(track.track.id))} />
+              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-80", generateGradient(track.track.id))} />
               <Image
                 src={getTrackImage(track.track)}
                 alt={track.track.title}
                 fill
-                className="object-cover mix-blend-overlay"
+                className="object-cover"
                 unoptimized
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
               {trackIsPlaying && (
-                <div className="absolute inset-0 bg-neon-teal/20" />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="absolute inset-0 bg-neon-teal/20 backdrop-blur-sm flex items-center justify-center"
+                >
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.1, 1],
+                      rotate: [0, 180, 360]
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    className="w-6 h-6 rounded-full bg-neon-teal/50 flex items-center justify-center"
+                  >
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                  </motion.div>
+                </motion.div>
               )}
             </motion.div>
 
@@ -168,16 +188,18 @@ export default function NowPlayingBar() {
               transition={{ delay: 0.2, duration: 0.4 }}
               className="flex-1 min-w-0"
             >
-              <h3 className="font-bold text-xl text-white truncate mb-1">
+              <h3 className="font-bold text-xl text-white truncate mb-1 drop-shadow-sm">
                 {track.track.title}
               </h3>
-              <p className="text-neon-teal text-lg truncate mb-2">
+              <p className="text-neon-teal text-lg truncate mb-2 font-medium drop-shadow-sm">
                 {track.track.artist}
               </p>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-400">{track.track.album}</span>
-                <span className="text-sm text-gray-500">•</span>
-                <span className="text-sm text-gray-500">{track.track.genre}</span>
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-gray-300 font-medium px-2 py-1 bg-white/5 rounded-md border border-white/10">
+                  {track.track.album}
+                </span>
+                <span className="text-sm text-gray-400">•</span>
+                <span className="text-sm text-neon-purple font-medium">{track.track.genre}</span>
               </div>
             </motion.div>
           </div>
@@ -191,15 +213,18 @@ export default function NowPlayingBar() {
           >
             <div className="flex items-center space-x-4">
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ 
+                  scale: 1.1,
+                  boxShadow: "0 8px 32px rgba(0,255,204,0.4), 0 4px 16px rgba(0,0,0,0.3)"
+                }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   updateTrackMutation.mutate({
                     id: track.id,
                     data: { is_playing: !trackIsPlaying }
                   });
                 }}
-                className="p-4 bg-gradient-to-r from-neon-teal to-neon-blue rounded-full text-dark-400 shadow-lg hover:shadow-neon-teal/50 transition-all duration-200"
+                className="p-4 bg-gradient-to-r from-neon-teal to-neon-blue rounded-full text-dark-400 shadow-[0_6px_24px_rgba(0,255,204,0.3),0_4px_12px_rgba(0,0,0,0.2)] transition-all duration-300 ring-2 ring-white/20"
               >
                 <AnimatePresence mode="wait">
                   {trackIsPlaying ? (
@@ -234,32 +259,32 @@ export default function NowPlayingBar() {
               </motion.button>
             </div>
 
-            {/* Clickable Progress Bar */}
+            {/* Enhanced Progress Bar */}
             <div className="w-80">
-              <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                <span>{formatDuration(displayTime)}</span>
-                <span>{formatDuration(track.track.duration_seconds)}</span>
+              <div className="flex items-center justify-between text-xs text-gray-300 mb-3 font-medium">
+                <span className="px-2 py-1 bg-dark-300/50 rounded-md">{formatDuration(displayTime)}</span>
+                <span className="px-2 py-1 bg-dark-300/50 rounded-md">{formatDuration(track.track.duration_seconds)}</span>
               </div>
               <div
                 ref={progressBarRef}
-                className="relative w-full h-2 bg-dark-300 rounded-full overflow-hidden cursor-pointer group"
+                className="relative w-full h-3 bg-dark-300/80 rounded-full overflow-hidden cursor-pointer group shadow-inner"
                 onMouseDown={handleSeekMouseDown}
               >
                 {/* Track Background */}
-                <div className="absolute inset-0 bg-dark-300 rounded-full" />
+                <div className="absolute inset-0 bg-gradient-to-r from-dark-300 to-dark-200 rounded-full shadow-inner" />
                 
                 {/* Progress Fill */}
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: isDraggingSeek ? 0 : 0.1 }}
-                  className="h-full bg-gradient-to-r from-neon-teal to-neon-blue rounded-full relative"
+                  className="h-full bg-gradient-to-r from-neon-teal via-neon-blue to-neon-purple rounded-full relative shadow-[0_0_12px_rgba(0,255,204,0.5)]"
                 />
                 
-                {/* Handle */}
+                {/* Enhanced Handle */}
                 <div
                   style={{ left: `${progress}%` }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.3)] ring-2 ring-neon-teal/50 group-hover:ring-neon-teal"
                 />
               </div>
             </div>
