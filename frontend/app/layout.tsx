@@ -20,7 +20,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.className}>
-      <body className="bg-dark-400 text-white min-h-screen overflow-hidden">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
+      <body className="bg-dark-400 text-white min-h-screen overflow-hidden responsive-container">
         <Providers>
           {children}
           <Toaster
